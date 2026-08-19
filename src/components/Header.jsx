@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import SearchBar from './SearchBar';
 import Icon from './Icon';
 
@@ -7,8 +8,36 @@ function Header({
   onSearchChange,
   viewMode,
   onViewToggle,
-  onRefresh
+  onRefresh,
+  user,
+  onLogout
 }) {
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountRef = useRef(null);
+
+  useEffect(() => {
+    if (!isAccountMenuOpen) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (!accountRef.current?.contains(event.target)) {
+        setIsAccountMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setIsAccountMenuOpen(false);
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAccountMenuOpen]);
+
+  const displayName = user?.displayName || 'Google Account';
+  const initial = (user?.displayName || user?.email || 'A').charAt(0).toUpperCase();
+
   return (
     <header className="app-header">
 
@@ -115,16 +144,51 @@ function Header({
         </button>
 
 
-        {/* Keep existing authentication placeholder.
-            Do NOT add organization branding here. */}
-        <button
-          type="button"
-          className="account-button"
-          aria-label="Google Account"
-          title="Google Account"
-        >
-          <span className="account-avatar">A</span>
-        </button>
+        <div className="account-menu-wrapper" ref={accountRef}>
+          <button
+            type="button"
+            className="account-button"
+            aria-label={displayName}
+            title={displayName}
+            aria-haspopup="menu"
+            aria-expanded={isAccountMenuOpen}
+            onClick={() => setIsAccountMenuOpen((value) => !value)}
+          >
+            {user?.photoURL ? (
+              <img className="account-photo" src={user.photoURL} alt="" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="account-avatar">{initial}</span>
+            )}
+          </button>
+
+          {isAccountMenuOpen ? (
+            <div className="account-menu" role="menu">
+              <div className="account-menu-header">
+                {user?.photoURL ? (
+                  <img className="account-menu-photo" src={user.photoURL} alt="" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="account-avatar account-avatar-large">{initial}</span>
+                )}
+                <div className="account-menu-identity">
+                  <span className="account-menu-name">{displayName}</span>
+                  <span className="account-menu-email">{user?.email}</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="account-menu-action"
+                role="menuitem"
+                onClick={() => {
+                  setIsAccountMenuOpen(false);
+                  onLogout?.();
+                }}
+              >
+                Sign out
+              </button>
+            </div>
+          ) : null}
+        </div>
 
       </div>
 
